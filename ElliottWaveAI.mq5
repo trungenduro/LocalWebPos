@@ -171,7 +171,8 @@ string GetChartScreenshotBase64()
     
     // 4. Encode to Base64
     uchar base64_data[];
-    int encoded_size = CryptEncode(CRYPT_BASE64, image_data, "", base64_data);
+    uchar key[]; // Empty key for Base64 encoding
+    int encoded_size = CryptEncode(CRYPT_BASE64, image_data, key, base64_data);
     
     if(encoded_size > 0)
     {

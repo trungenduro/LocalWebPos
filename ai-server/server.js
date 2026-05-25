@@ -3,8 +3,7 @@ const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
-// MT5 sends JSON data, we need to parse it
-app.use(express.json());
+app.use(express.text({ type: '*/*', limit: '15mb' }));
 
 const PORT = process.env.PORT || 5000;
 
@@ -14,7 +13,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/analyze', async (req, res) => {
     try {
-        const data = req.body;
+        const rawBody = (typeof req.body === 'string' ? req.body : '').replace(/\u0000/g, '').trim();
+        const data = rawBody ? JSON.parse(rawBody) : {};
         console.log("---------------------------------------------------");
         console.log(`[${new Date().toISOString()}] Received data from MT5:`, JSON.stringify(data));
 
