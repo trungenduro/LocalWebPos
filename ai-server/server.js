@@ -1,11 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const os = require('os');
 
 const app = express();
 app.use(express.text({ type: '*/*', limit: '15mb' }));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+const SERVER_API_KEY = process.env.SERVER_API_KEY || '';
 
 // Initialize Google Gemini AI
 // Make sure you have GEMINI_API_KEY in your .env file
@@ -13,6 +16,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/analyze', async (req, res) => {
     try {
+        if (SERVER_API_KEY && req.get('x-api-key') !== SERVER_API_KEY) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
         const rawBody = (typeof req.body === 'string' ? req.body : '').replace(/\u0000/g, '').trim();
         const data = rawBody ? JSON.parse(rawBody) : {};
         console.log("---------------------------------------------------");
@@ -68,7 +74,7 @@ Example JSON output format:
         }
 
         // Use the Gemini 2.5 Flash model (supports multimodal vision)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
         
         console.log("Sending prompt and image to Gemini AI...");
         const result = await model.generateContent(requestContent);
@@ -92,9 +98,17 @@ Example JSON output format:
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
+    const ifaces = os.networkInterfaces();
+    const ips = [];
+    Object.values(ifaces).forEach((list) => {
+        (list || []).forEach((addr) => {
+            if (addr && addr.family === 'IPv4' && !addr.internal) ips.push(addr.address);
+        });
+    });
     console.log(`===================================================`);
     console.log(`🚀 AI Server running on http://127.0.0.1:${PORT}`);
+    if (ips.length) console.log(`🚀 LAN Access: ${ips.map((ip) => `http://${ip}:${PORT}`).join(' , ')}`);
     console.log(`🧠 Using Google Gemini API`);
     console.log(`⏳ Waiting for MT5 EA data on /analyze endpoint...`);
     console.log(`===================================================`);
